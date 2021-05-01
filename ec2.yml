@@ -22,7 +22,6 @@ Parameters:
     Description: AMI  
   InstanceTypeParameter:
     Type: String
-    Default: 't2.micro'
     Description: Enter instance size.
   Key:
     Type: String
@@ -84,4 +83,10 @@ Outputs:
       Fn::GetAtt:
         - EC2Instance
         - PublicIp
-    Description: Server's PublicIp Address            
+    Description: Server's PublicIp Address
+  InstanceID:
+    Value:
+      Fn::GetAtt:
+        - EC2Instance
+        - InstanceID
+    Description: Server's InstanceID       
