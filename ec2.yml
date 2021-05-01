@@ -85,8 +85,5 @@ Outputs:
         - PublicIp
     Description: Server's PublicIp Address
   InstanceID:
-    Value:
-      Fn::GetAtt:
-        - EC2Instance
-        - InstanceID
+    Value: !Ref EC2Instance
     Description: Server's InstanceID       
