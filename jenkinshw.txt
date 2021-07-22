@@ -1,0 +1,62 @@
+ДЗ на субботу
+
+1) Установить Jenkins как сервис. Кто хочет и чувствует силы, может это сделать в Docker
+2) Создать параметриризированный Jenkins Job, который выкачивает из GitHub клаудформейшн темплейт и подставляет в него параметры из Jenkins Job
+3) Настроить AWS access and Secret key, т.е нужно добавить в Jenkins credentials
+4) Создать виртуальную машину в AWS используя пункты 1..3
+5) Если машинка создалась - передать в Jenkins console output ее ID 
+6) Создать джобу которая раз в 5 минут будет присылать данные в телеграмм канал по CPU/RAM на ранее созданной виртуальной машине
+7) Настроить Jenkins на работу с Active Directory, чтобы заработала авторизация с AD credentials
+
+
+sudo yum update -y
+sudo yum install wget  -y
+sudo wget -O /etc/yum.repos.d/jenkins.repo https://pkg.jenkins.io/redhat-stable/jenkins.repo
+sudo rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
+sudo yum upgrade -y
+sudo yum install jenkins java-1.8.0-openjdk-devel git -y
+sudo systemctl daemon-reload
+sudo systemctl start jenkins
+sudo systemctl status jenkins
+
+
+YOURPORT=8080
+PERM="--permanent"
+SERV="$PERM --service=jenkins"
+
+firewall-cmd $PERM --new-service=jenkins
+firewall-cmd $SERV --set-short="Jenkins ports"
+firewall-cmd $SERV --set-description="Jenkins port exceptions"
+firewall-cmd $SERV --add-port=$YOURPORT/tcp
+firewall-cmd $PERM --add-service=jenkins
+firewall-cmd --zone=public --add-service=http --permanent
+firewall-cmd --reload
+
+
+
+
+
+echo "------START------"
+export PATH=/usr/local/bin/:$PATH
+ls -la
+echo "------CREATING------"
+aws cloudformation create-stack --stack-name $StackName --template-body file://ec2.yml --parameters ParameterKey=InstanceTypeParameter,ParameterValue=$InstanceTypeParameter --capabilities CAPABILITY_NAMED_IAM
+if [[ $? -eq 0 ]]; then
+    # Wait for create-stack to finish
+    echo  "Waiting for create-stack command to complete"
+    CREATE_STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $StackName --query 'Stacks[0].StackStatus' --output text)
+    while [[ $CREATE_STACK_STATUS == "REVIEW_IN_PROGRESS" ]] || [[ $CREATE_STACK_STATUS == "CREATE_IN_PROGRESS" ]]
+    do
+        # Wait 10 seconds and then check stack status again
+        sleep 10
+        CREATE_STACK_STATUS=$(aws cloudformation describe-stacks --stack-name $StackName --query 'Stacks[0].StackStatus' --output text)
+    done
+fi
+echo "------OUTPUTS------"
+aws cloudformation describe-stacks --stack-name $StackName | grep OutputValue
+echo "------END------"
+
+
+
+
+aws cloudformation describe-stacks --stack-name defaultname --query "Stacks[0].Outputs[?OutputKey=='InstanceID'].OutputValue" --output text
